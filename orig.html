@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>排泄介助 チェックシート（順序制御）</title>
+  <style>
+    :root{--border:#222;--pad:6px;--font:"Yu Gothic","Meiryo",sans-serif;}
+    body{font-family:var(--font);margin:20px;background:#fff;color:#111}
+    .sheet{max-width:1100px;margin:0 auto}
+    .notice{margin-bottom:12px;padding:8px;border:1px solid #ccc;background:#fafafa}
+    .two-column{display:flex;gap:24px;flex-wrap:wrap;justify-content:center}
+    table.checklist{border-collapse:collapse;width:520px;table-layout:fixed;font-size:14px}
+    table.checklist th, table.checklist td{border:1px solid var(--border);padding:var(--pad);text-align:center;vertical-align:middle}
+    table.checklist th{background:#f0f0f0;font-weight:600}
+    td.num{width:60px} td.cba{width:42px} td.sign{width:120px}
+    input[type="text"]{width:100%;box-sizing:border-box;border:0;outline:none;text-align:center;background:transparent;padding:2px}
+    tr.completed td{background:#dcdcdc;color:#222}
+    .msg{color:#b00;font-size:13px;height:18px;margin-top:6px}
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <h2>チェックシート</h2>
+    <div class="notice">
+      <p><strong>場面：</strong>排泄介助</p>
+      <p><strong>C：</strong>教えてもらいながら出来た</p>
+      <p><strong>B：</strong>見てもらいながら実施した</p>
+      <p><strong>A：</strong>ひとりで出来た</p>
+      <p class="small">C → B → A の順にチェックする。職員２名からサインされたら完了、今後は一人で行う。
+      </p>
+    </div>
+
+    <div class="two-column">
+      <table class="checklist" id="leftTable" aria-label="左列">
+        <thead><tr><th>番号</th><th>C</th><th>B</th><th>A</th><th>サイン1</th><th>サイン2</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <table class="checklist" id="rightTable" aria-label="右列">
+        <thead><tr><th>番号</th><th>C</th><th>B</th><th>A</th><th>サイン1</th><th>サイン2</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    // 左：101-110,201-210 / 右：211-227
+    const leftNums = [...range(101,110), ...range(201,210)];
+    const rightNums = range(211,227);
+
+    const leftTbody = document.querySelector("#leftTable tbody");
+    const rightTbody = document.querySelector("#rightTable tbody");
+    const msgEl = document.getElementById("msg");
+
+    function range(a,b){ const r=[]; for(let i=a;i<=b;i++) r.push(i); return r; }
+
+    function makeRow(num){
+      const tr = document.createElement("tr");
+      tr.id = `row${num}`;
+      tr.innerHTML = `
+        <td class="num">${num}</td>
+        <td class="cba"><input type="checkbox" id="c${num}" onchange="onCBAChange(${num},'C')"></td>
+        <td class="cba"><input type="checkbox" id="b${num}" onchange="onCBAChange(${num},'B')"></td>
+        <td class="cba"><input type="checkbox" id="a${num}" onchange="onCBAChange(${num},'A')"></td>
+        <td class="sign"><input type="text" id="sign1_${num}" placeholder="サイン1" oninput="updateStatus(${num})" autocomplete="off"></td>
+        <td class="sign"><input type="text" id="sign2_${num}" placeholder="サイン2" oninput="updateStatus(${num})" autocomplete="off"></td>
+      `;
+      return tr;
+    }
+
+    leftNums.forEach(n => leftTbody.appendChild(makeRow(n)));
+    rightNums.forEach(n => rightTbody.appendChild(makeRow(n)));
+
+    // C->B->A 順序制御
+    function onCBAChange(num, which){
+      clearMsg();
+      const c = document.getElementById(`c${num}`);
+      const b = document.getElementById(`b${num}`);
+      const a = document.getElementById(`a${num}`);
+
+      // ユーザがチェックした要素の状態を読む（直後の状態）
+      const checkedC = c.checked;
+      const checkedB = b.checked;
+      const checkedA = a.checked;
+
+      // 順序ルール：C が先にチェックされていないのに B をチェックできない。B が先にチェックされていないのに A をチェックできない。
+      if(which === 'B' && checkedB && !checkedC){
+        // 不正操作を無効化
+        b.checked = false;
+        showMsg(`まず C をチェックしてください（${num}）`);
+        return;
+      }
+      if(which === 'A' && checkedA && (!checkedC || !checkedB)){
+        a.checked = false;
+        showMsg(`まず C → B の順にチェックしてください（${num}）`);
+        return;
+      }
+
+      // 逆に、上位のチェックを外した場合は下位を自動で外す（整合性保持）
+      if(which === 'C' && !c.checked){
+        b.checked = false;
+        a.checked = false;
+      }
+      if(which === 'B' && !b.checked){
+        a.checked = false;
+      }
+
+      // 更新後の状態で行の完成判定を行う
+      updateStatus(num);
+    }
+
+    function updateStatus(num){
+      const row = document.getElementById(`row${num}`);
+      const a = document.getElementById(`a${num}`).checked;
+      const sign1 = document.getElementById(`sign1_${num}`).value.trim();
+      const sign2 = document.getElementById(`sign2_${num}`).value.trim();
+
+      // 完了条件：Aがチェックされ、サイン1・サイン2が両方入力されていること
+      if(a && sign1 !== "" && sign2 !== ""){
+        row.classList.add("completed");
+      } else {
+        row.classList.remove("completed");
+      }
+    }
+
+    // メッセージ表示
+    let msgTimeout = null;
+    function showMsg(text){
+      clearTimeout(msgTimeout);
+      msgEl.textContent = text;
+      msgTimeout = setTimeout(() => { msgEl.textContent = ""; }, 3000);
+    }
+    function clearMsg(){ msgEl.textContent = ""; }
+
+    // Enterで次のサイン欄へ移動（使いやすさ）
+    document.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){
+        const active = document.activeElement;
+        if(active && active.tagName === "INPUT" && active.type === "text"){
+          e.preventDefault();
+          const inputs = Array.from(document.querySelectorAll('input[type="text"]'));
+          const idx = inputs.indexOf(active);
+          if(idx >= 0 && idx < inputs.length - 1) inputs[idx+1].focus();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
