@@ -1,0 +1,92 @@
+<style>
+  .sheet { max-width: 1100px; margin: 0 auto; font-family: "Yu Gothic", "Meiryo", sans-serif; }
+  .notice { margin-bottom: 12px; padding: 8px; border: 1px solid #ccc; background: #fafafa; }
+  .two-column { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .checklist { border-collapse: collapse; width: 520px; table-layout: fixed; font-size: 14px; }
+  .checklist th, .checklist td { border: 1px solid #222; padding: 4px; text-align: center; }
+  .checklist th { background: #f0f0f0; font-weight: 600; }
+  .td-num { width: 60px; }
+  .td-cba { width: 42px; }
+  .td-sign { width: 120px; }
+  .checklist input[type="text"] { width: 100%; box-sizing: border-box; border: 0; outline: none; text-align: center; background: transparent; }
+  /* 完了時の色 */
+  .completed { background: #dcdcdc !important; color: #222; }
+</style>
+
+<div class="sheet">
+  <h2>チェックシート</h2>
+
+  <div class="notice">
+    <p><strong>場面 :</strong> 排泄介助</p>
+    <p><strong>C :</strong>教えてもらいながら出来た</p>
+    <p><strong>B :</strong>見てもらいながら実施した</p>
+    <p><strong>A :</strong>ひとりで出来た</p>
+    <p><small>C → B → A の順にチェックする。職員2名からサインされたら完了、今後は一人で行う。</small></p>
+  </div>
+
+  <%= form_with url: excretion_records_path, method: :post, local: true do %>
+    <div style="text-align: right; margin-bottom: 10px;">
+      <%= submit_tag "保存する", style: "padding: 6px 16px; font-weight: bold; cursor: pointer;" %>
+    </div>
+
+    <div class="two-column">
+      <%# 左側のテーブル（101〜110, 201〜210 から 4 と 9 を除外） %>
+      <% left_numbers = ((101..110).to_a + (201..210).to_a).reject { |n| n.to_s.include?('4') || n.to_s.include?('9') } %>
+      <table class="checklist">
+        <thead>
+          <tr>
+            <th class="td-num">番号</th>
+            <th class="td-cba">C</th>
+            <th class="td-cba">B</th>
+            <th class="td-cba">A</th>
+            <th class="td-sign">サイン1</th>
+            <th class="td-sign">サイン2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% left_numbers.each do |num| %>
+            <% record = @excretion_records.find { |r| r.number == num } || ExcretionRecord.new(number: num) %>
+            <% is_completed = record.sign1.present? && record.sign2.present? %>
+            <tr class="<%= 'completed' if is_completed %>">
+              <td><%= num %></td>
+              <td><%= check_box_tag "records[#{num}][c_check]", "1", record.c_check %></td>
+              <td><%= check_box_tag "records[#{num}][b_check]", "1", record.b_check %></td>
+              <td><%= check_box_tag "records[#{num}][a_check]", "1", record.a_check %></td>
+              <td><%= text_field_tag "records[#{num}][sign1]", record.sign1, placeholder: "サイン1" %></td>
+              <td><%= text_field_tag "records[#{num}][sign2]", record.sign2, placeholder: "サイン2" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <%# 右側のテーブル（211〜227 から 4 と 9 を除外） %>
+      <% right_numbers = (211..227).to_a.reject { |n| n.to_s.include?('4') || n.to_s.include?('9') } %>
+      <table class="checklist">
+        <thead>
+          <tr>
+            <th class="td-num">番号</th>
+            <th class="td-cba">C</th>
+            <th class="td-cba">B</th>
+            <th class="td-cba">A</th>
+            <th class="td-sign">サイン1</th>
+            <th class="td-sign">サイン2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% right_numbers.each do |num| %>
+            <% record = @excretion_records.find { |r| r.number == num } || ExcretionRecord.new(number: num) %>
+            <% is_completed = record.sign1.present? && record.sign2.present? %>
+            <tr class="<%= 'completed' if is_completed %>">
+              <td><%= num %></td>
+              <td><%= check_box_tag "records[#{num}][c_check]", "1", record.c_check %></td>
+              <td><%= check_box_tag "records[#{num}][b_check]", "1", record.b_check %></td>
+              <td><%= check_box_tag "records[#{num}][a_check]", "1", record.a_check %></td>
+              <td><%= text_field_tag "records[#{num}][sign1]", record.sign1, placeholder: "サイン1" %></td>
+              <td><%= text_field_tag "records[#{num}][sign2]", record.sign2, placeholder: "サイン2" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>

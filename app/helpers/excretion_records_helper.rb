@@ -1,0 +1,2 @@
+module ExcretionRecordsHelper
+end

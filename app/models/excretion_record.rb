@@ -1,0 +1,2 @@
+class ExcretionRecord < ApplicationRecord
+end
